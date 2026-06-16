@@ -1,59 +1,77 @@
 -- ============================================
--- ГАРАНТОВАНО РОБОЧИЙ СКРИПТ ДЛЯ BLOX FRUITS
--- З МНОЖИННИМИ СПОСОБАМИ СТВОРЕННЯ GUI
+-- РОБОЧИЙ СКРИПТ ДЛЯ BLOX FRUITS
+-- З ДІАГНОСТИКОЮ ТА РЕЗЕРВНИМИ МЕТОДАМИ
 -- ============================================
 
--- [1] БАЗОВА ПЕРЕВІРКА
-print("=" .. string.rep("=", 50))
-print("🚀 СКРИПТ ЗАПУЩЕНО!")
-print("=" .. string.rep("=", 50))
+print("=" .. string.rep("=", 60))
+print("🚀 ЗАПУСК СКРИПТА")
+print("=" .. string.rep("=", 60))
 
--- [2] ОТРИМУЄМО ГРАВЦЯ
+-- [1] ОТРИМУЄМО ГРАВЦЯ
 local player = game:GetService("Players").LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 print("✅ Гравець: " .. player.Name)
 
--- [3] ЧЕКАЄМО ПОЯВИ ПЕРСОНАЖА
-repeat wait(0.5) until player.Character
-print("✅ Персонаж з'явився!")
+-- [2] НАЛАШТУВАННЯ
+local settings = {
+    AutoFarm = false,
+    AutoTeleport = false,
+    AutoCollect = false,
+    AutoQuest = false,
+    FarmRadius = 50,
+    FlyHeight = 5,
+    AttackKey = "Q",
+    CollectKey = "E"
+}
 
--- [4] ОТРИМУЄМО PlayerGui
-local playerGui = player:WaitForChild("PlayerGui", 5)
-if not playerGui then
-    playerGui = Instance.new("ScreenGui")
-    playerGui.Parent = player
-    print("⚠️ Створено PlayerGui вручну!")
+-- [3] ЗМІННІ ДЛЯ GUI
+local screenGui = nil
+local statusLabel = nil
+local farmBtn = nil
+local tpBtn = nil
+local collectBtn = nil
+local questBtn = nil
+
+-- [4] ДІАГНОСТИЧНА ФУНКЦІЯ
+local function log(message, color)
+    print("[LOG] " .. message)
+    pcall(function()
+        if statusLabel then
+            statusLabel.Text = "📊 " .. message
+        end
+    end)
 end
-print("✅ PlayerGui отримано!")
-
--- [5] ВИДАЛЯЄМО СТАРІ GUI (якщо є)
-local oldGui = playerGui:FindFirstChild("BloxFruitsGUI")
-if oldGui then oldGui:Destroy() end
 
 -- ============================================
--- СТВОРЕННЯ GUI (СПОСІБ 1 - СТАНДАРТНИЙ)
+-- СТВОРЕННЯ МЕНЮ
 -- ============================================
-local success, err = pcall(function()
-    -- Створюємо ScreenGui
-    local screenGui = Instance.new("ScreenGui")
+local function createGUI()
+    print("🔄 Створення GUI...")
+    
+    -- Видаляємо старе GUI
+    local oldGui = playerGui:FindFirstChild("BloxFruitsGUI")
+    if oldGui then oldGui:Destroy() end
+    
+    -- Створюємо нове
+    screenGui = Instance.new("ScreenGui")
     screenGui.Name = "BloxFruitsGUI"
     screenGui.ResetOnSpawn = false
     screenGui.Parent = playerGui
-    print("✅ ScreenGui створено!")
+    print("✅ ScreenGui створено")
     
-    -- ГОЛОВНЕ ВІКНО
+    -- Головне вікно
     local mainFrame = Instance.new("Frame")
-    mainFrame.Size = UDim2.new(0, 350, 0, 400)
-    mainFrame.Position = UDim2.new(0.5, -175, 0.5, -200)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+    mainFrame.Size = UDim2.new(0, 350, 0, 420)
+    mainFrame.Position = UDim2.new(0.5, -175, 0.5, -210)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
     mainFrame.BackgroundTransparency = 0.05
     mainFrame.BorderSizePixel = 2
     mainFrame.BorderColor3 = Color3.fromRGB(255, 170, 0)
     mainFrame.Active = true
     mainFrame.Draggable = true
     mainFrame.Parent = screenGui
-    print("✅ MainFrame створено!")
     
-    -- ЗАГОЛОВОК
+    -- Заголовок
     local title = Instance.new("TextLabel")
     title.Size = UDim2.new(1, 0, 0, 40)
     title.Position = UDim2.new(0, 0, 0, 0)
@@ -64,9 +82,8 @@ local success, err = pcall(function()
     title.TextScaled = true
     title.Font = Enum.Font.GothamBold
     title.Parent = mainFrame
-    print("✅ Title створено!")
     
-    -- КНОПКА ЗАКРИТТЯ
+    -- Кнопка закриття
     local closeBtn = Instance.new("TextButton")
     closeBtn.Size = UDim2.new(0, 30, 0, 30)
     closeBtn.Position = UDim2.new(1, -35, 0, 5)
@@ -79,20 +96,19 @@ local success, err = pcall(function()
     closeBtn.MouseButton1Click:Connect(function()
         screenGui:Destroy()
     end)
-    print("✅ CloseBtn створено!")
     
-    -- ФУНКЦІЯ СТВОРЕННЯ КНОПКИ
+    -- Функція створення кнопки
     local function createButton(text, yPos, callback)
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(0.85, 0, 0, 35)
         btn.Position = UDim2.new(0.075, 0, 0, yPos)
-        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+        btn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
         btn.Text = text
         btn.TextColor3 = Color3.fromRGB(255, 255, 255)
         btn.TextSize = 15
         btn.Font = Enum.Font.GothamBold
         btn.BorderSizePixel = 1
-        btn.BorderColor3 = Color3.fromRGB(70, 70, 85)
+        btn.BorderColor3 = Color3.fromRGB(65, 65, 80)
         btn.Parent = mainFrame
         btn.MouseButton1Click:Connect(callback)
         return btn
@@ -101,143 +117,111 @@ local success, err = pcall(function()
     -- СТВОРЮЄМО КНОПКИ
     local yPos = 50
     
-    -- Кнопка Авто-фарм
-    local farmBtn = createButton("🤖 АВТО-ФАРМ [ВИКЛ]", yPos, function()
+    -- 1. Авто-фарм
+    farmBtn = createButton("🤖 АВТО-ФАРМ [ВИКЛ]", yPos, function()
         settings.AutoFarm = not settings.AutoFarm
         farmBtn.Text = settings.AutoFarm and "🤖 АВТО-ФАРМ [ВКЛ]" or "🤖 АВТО-ФАРМ [ВИКЛ]"
-        farmBtn.BackgroundColor3 = settings.AutoFarm and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(50, 50, 65)
+        farmBtn.BackgroundColor3 = settings.AutoFarm and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(45, 45, 60)
+        log(settings.AutoFarm and "Авто-фарм УВІМКНЕНО" or "Авто-фарм ВИМКНЕНО")
     end)
     yPos = yPos + 45
     
-    -- Кнопка Телепорт
-    local tpBtn = createButton("🌀 ТЕЛЕПОРТ [ВИКЛ]", yPos, function()
+    -- 2. Телепорт
+    tpBtn = createButton("🌀 ТЕЛЕПОРТ [ВИКЛ]", yPos, function()
         settings.AutoTeleport = not settings.AutoTeleport
         tpBtn.Text = settings.AutoTeleport and "🌀 ТЕЛЕПОРТ [ВКЛ]" or "🌀 ТЕЛЕПОРТ [ВИКЛ]"
-        tpBtn.BackgroundColor3 = settings.AutoTeleport and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(50, 50, 65)
+        tpBtn.BackgroundColor3 = settings.AutoTeleport and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(45, 45, 60)
+        log(settings.AutoTeleport and "Телепорт УВІМКНЕНО" or "Телепорт ВИМКНЕНО")
     end)
     yPos = yPos + 45
     
-    -- Кнопка Збір фруктів
-    local collectBtn = createButton("🍎 ЗБІР ФРУКТІВ [ВИКЛ]", yPos, function()
+    -- 3. Збір фруктів
+    collectBtn = createButton("🍎 ЗБІР ФРУКТІВ [ВИКЛ]", yPos, function()
         settings.AutoCollect = not settings.AutoCollect
         collectBtn.Text = settings.AutoCollect and "🍎 ЗБІР ФРУКТІВ [ВКЛ]" or "🍎 ЗБІР ФРУКТІВ [ВИКЛ]"
-        collectBtn.BackgroundColor3 = settings.AutoCollect and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(50, 50, 65)
+        collectBtn.BackgroundColor3 = settings.AutoCollect and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(45, 45, 60)
+        log(settings.AutoCollect and "Збір фруктів УВІМКНЕНО" or "Збір фруктів ВИМКНЕНО")
     end)
     yPos = yPos + 45
     
-    -- Кнопка Авто-квест
-    local questBtn = createButton("📋 АВТО-КВЕСТ [ВИКЛ]", yPos, function()
+    -- 4. Авто-квест
+    questBtn = createButton("📋 АВТО-КВЕСТ [ВИКЛ]", yPos, function()
         settings.AutoQuest = not settings.AutoQuest
         questBtn.Text = settings.AutoQuest and "📋 АВТО-КВЕСТ [ВКЛ]" or "📋 АВТО-КВЕСТ [ВИКЛ]"
-        questBtn.BackgroundColor3 = settings.AutoQuest and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(50, 50, 65)
+        questBtn.BackgroundColor3 = settings.AutoQuest and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(45, 45, 60)
+        log(settings.AutoQuest and "Авто-квест УВІМКНЕНО" or "Авто-квест ВИМКНЕНО")
     end)
     yPos = yPos + 45
     
-    -- СТАТУС
-    local statusLabel = Instance.new("TextLabel")
+    -- 5. Тестова кнопка (для перевірки)
+    local testBtn = createButton("🔧 ТЕСТ КНОПКИ", yPos, function()
+        log("🔧 Тестова кнопка НАТИСНУТА!")
+        testBtn.BackgroundColor3 = Color3.fromRGB(255, 200, 0)
+        wait(0.5)
+        testBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+    end)
+    yPos = yPos + 45
+    
+    -- 6. Статус
+    statusLabel = Instance.new("TextLabel")
     statusLabel.Size = UDim2.new(0.85, 0, 0, 30)
     statusLabel.Position = UDim2.new(0.075, 0, 0, yPos + 10)
-    statusLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+    statusLabel.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
     statusLabel.BackgroundTransparency = 0.5
-    statusLabel.Text = "Статус: Очікування..."
+    statusLabel.Text = "📊 Статус: Очікування..."
     statusLabel.TextColor3 = Color3.fromRGB(150, 255, 150)
     statusLabel.TextSize = 14
     statusLabel.Font = Enum.Font.GothamBold
     statusLabel.Parent = mainFrame
-    print("✅ StatusLabel створено!")
     
-    print("=" .. string.rep("=", 50))
-    print("🎉 МЕНЮ УСПІШНО СТВОРЕНО!")
-    print("📌 Шукайте вікно в центрі екрану")
-    print("=" .. string.rep("=", 50))
+    print("✅ GUI створено успішно!")
+    log("Меню створено! Натискайте кнопки")
     
-    return screenGui, statusLabel
-end)
-
--- [6] ЯКЩО СТАНДАРТНИЙ СПОСІБ НЕ ПРАЦЮЄ - ДУБЛЕР
-if not success then
-    print("⚠️ Помилка при створенні GUI: " .. tostring(err))
-    print("🔄 Спроба альтернативного способу...")
-    
-    -- АЛЬТЕРНАТИВНИЙ СПОСІБ (через StarterGui)
-    pcall(function()
-        local screenGui = Instance.new("ScreenGui")
-        screenGui.Name = "BloxFruitsGUI"
-        screenGui.Parent = game:GetService("StarterGui")
-        
-        local frame = Instance.new("Frame")
-        frame.Size = UDim2.new(0, 300, 0, 200)
-        frame.Position = UDim2.new(0.5, -150, 0.5, -100)
-        frame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-        frame.BackgroundTransparency = 0.1
-        frame.Parent = screenGui
-        
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1, 0, 0, 40)
-        label.Text = "⚡ MENU (ALTERNATIVE) ⚡"
-        label.TextColor3 = Color3.fromRGB(255, 255, 255)
-        label.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
-        label.Parent = frame
-        
-        print("✅ Альтернативне GUI створено через StarterGui!")
-    end)
+    return true
 end
 
 -- ============================================
--- [7] НАЛАШТУВАННЯ ТА ЗМІННІ
--- ============================================
-local settings = {
-    AutoFarm = false,
-    AutoTeleport = false,
-    AutoCollect = false,
-    AutoQuest = false,
-    FarmRadius = 50,
-    FlyHeight = 5
-}
-
-local character = player.Character
-local rootPart = character:FindFirstChild("HumanoidRootPart")
-
--- ============================================
--- [8] ОСНОВНІ ФУНКЦІЇ
+-- ОСНОВНІ ФУНКЦІЇ
 -- ============================================
 
--- Отримання рівня гравця
+-- [1] ОТРИМАННЯ РІВНЯ
 local function getPlayerLevel()
     local level = 0
-    local stats = player:FindFirstChild("Stats")
-    if stats then
-        local levelStat = stats:FindFirstChild("Level")
-        if levelStat then level = levelStat.Value end
-    end
-    if level == 0 then
-        local leaderstats = player:FindFirstChild("leaderstats")
-        if leaderstats then
-            local levelStat = leaderstats:FindFirstChild("Level")
+    pcall(function()
+        local stats = player:FindFirstChild("Stats")
+        if stats then
+            local levelStat = stats:FindFirstChild("Level")
             if levelStat then level = levelStat.Value end
         end
-    end
+        if level == 0 then
+            local leaderstats = player:FindFirstChild("leaderstats")
+            if leaderstats then
+                local levelStat = leaderstats:FindFirstChild("Level")
+                if levelStat then level = levelStat.Value end
+            end
+        end
+    end)
     return level
 end
 
--- Список ворогів за рівнем
+-- [2] СПИСОК ВОРОГІВ ЗА РІВНЕМ
 local function getEnemiesForLevel(level)
     local enemies = {}
     local enemyList = {
-        {min = 0, max = 10, names = {"Bandit", "Brute", "Pirate"}},
-        {min = 10, max = 25, names = {"Marine", "Sailor", "Captain"}},
-        {min = 25, max = 40, names = {"Galley", "Crew", "Navigator"}},
-        {min = 40, max = 60, names = {"Monkey", "Gorilla", "Ape"}},
-        {min = 60, max = 80, names = {"Pirate", "Corsair", "Buccaneer"}},
-        {min = 80, max = 100, names = {"Swordsman", "Samurai", "Ninja"}},
-        {min = 100, max = 125, names = {"Mage", "Wizard", "Sorcerer"}},
-        {min = 125, max = 150, names = {"Knight", "Paladin", "Warrior"}},
-        {min = 150, max = 175, names = {"Dragon", "Wyvern", "Drake"}},
-        {min = 175, max = 200, names = {"Asard", "Astaroth", "Demon"}},
-        {min = 200, max = 225, names = {"Titan", "Giant", "Colossus"}},
-        {min = 225, max = 250, names = {"God", "Deity", "Angel"}},
-        {min = 250, max = 275, names = {"Emperor", "King", "Lord"}},
-        {min = 275, max = 300, names = {"Legend", "Myth", "Hero"}}
+        {min = 0, max = 10, names = {"Bandit", "Brute"}},
+        {min = 10, max = 25, names = {"Marine", "Sailor"}},
+        {min = 25, max = 40, names = {"Galley", "Crew"}},
+        {min = 40, max = 60, names = {"Monkey", "Gorilla"}},
+        {min = 60, max = 80, names = {"Pirate", "Corsair"}},
+        {min = 80, max = 100, names = {"Swordsman", "Samurai"}},
+        {min = 100, max = 125, names = {"Mage", "Wizard"}},
+        {min = 125, max = 150, names = {"Knight", "Paladin"}},
+        {min = 150, max = 175, names = {"Dragon", "Wyvern"}},
+        {min = 175, max = 200, names = {"Asard", "Demon"}},
+        {min = 200, max = 225, names = {"Titan", "Giant"}},
+        {min = 225, max = 250, names = {"God", "Deity"}},
+        {min = 250, max = 275, names = {"Emperor", "King"}},
+        {min = 275, max = 300, names = {"Legend", "Myth"}}
     }
     
     for _, data in pairs(enemyList) do
@@ -250,14 +234,14 @@ local function getEnemiesForLevel(level)
     return enemies
 end
 
--- Пошук ворогів для поточного рівня
+-- [3] ПОШУК ВОРОГІВ
 local function getTargetEnemies()
     local level = getPlayerLevel()
     local targetNames = getEnemiesForLevel(level)
     local enemies = {}
+    local character = player.Character
     
     if not character then return enemies end
-    if not rootPart then return enemies end
     
     for _, v in pairs(workspace:GetChildren()) do
         if v:IsA("Model") and v:FindFirstChild("Humanoid") then
@@ -278,13 +262,17 @@ local function getTargetEnemies()
     return enemies
 end
 
--- Пошук найближчого ворога
+-- [4] ПОШУК НАЙБЛИЖЧОГО ВОРОГА
 local function getNearestEnemy()
     local enemies = getTargetEnemies()
+    local character = player.Character
+    if not character then return nil end
+    
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return nil end
+    
     local nearest = nil
     local shortestDist = settings.FarmRadius
-    
-    if not rootPart then return nil end
     
     for _, enemy in pairs(enemies) do
         local hrp = enemy:FindFirstChild("HumanoidRootPart")
@@ -299,10 +287,15 @@ local function getNearestEnemy()
     return nearest
 end
 
--- Телепорт на висоту 5 метрів
+-- [5] ТЕЛЕПОРТ НА ВИСОТУ
 local function flyToEnemy(target)
     if not target then return false end
+    local character = player.Character
+    if not character then return false end
+    
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
     if not rootPart then return false end
+    
     local hrp = target:FindFirstChild("HumanoidRootPart")
     if not hrp then return false end
     
@@ -311,23 +304,57 @@ local function flyToEnemy(target)
     return true
 end
 
--- Атака
+-- [6] АТАКА (3 СПОСОБИ)
 local function attack()
+    local success = false
+    
+    -- Спосіб 1: VirtualInputManager
     pcall(function()
-        game:GetService("VirtualInputManager"):SendKeyEvent(true, "Q", false, nil)
+        game:GetService("VirtualInputManager"):SendKeyEvent(true, settings.AttackKey, false, nil)
         wait(0.1)
-        game:GetService("VirtualInputManager"):SendKeyEvent(false, "Q", false, nil)
+        game:GetService("VirtualInputManager"):SendKeyEvent(false, settings.AttackKey, false, nil)
+        success = true
     end)
+    
+    -- Спосіб 2: UserInputService
+    if not success then
+        pcall(function()
+            local uis = game:GetService("UserInputService")
+            uis.InputBegan:Fire(Enum.KeyCode[settings.AttackKey], Enum.UserInputState.Begin, nil)
+            wait(0.1)
+            uis.InputEnded:Fire(Enum.KeyCode[settings.AttackKey], Enum.UserInputState.End, nil)
+            success = true
+        end)
+    end
+    
+    -- Спосіб 3: Натискання через ContextActionService
+    if not success then
+        pcall(function()
+            local cas = game:GetService("ContextActionService")
+            cas:BindAction("Attack", function() end, false, Enum.KeyCode[settings.AttackKey])
+            cas:FireAction("Attack", Enum.UserInputState.Begin, nil)
+            wait(0.1)
+            cas:FireAction("Attack", Enum.UserInputState.End, nil)
+            success = true
+        end)
+    end
+    
+    return success
 end
 
--- Збір фруктів
+-- [7] ЗБІР ФРУКТІВ
 local function collectFruits()
+    local character = player.Character
+    if not character then return false end
+    
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
     if not rootPart then return false end
     
     for _, v in pairs(workspace:GetChildren()) do
         if v:IsA("Tool") and v:FindFirstChild("Handle") then
             local name = v.Name:lower()
-            if name:find("fruit") or name:find("apple") or name:find("banana") or name:find("chest") then
+            if name:find("fruit") or name:find("apple") or name:find("banana") or 
+               name:find("bomb") or name:find("chest") then
                 local handle = v:FindFirstChild("Handle")
                 if handle then
                     local dist = (rootPart.Position - handle.Position).Magnitude
@@ -335,9 +362,9 @@ local function collectFruits()
                         rootPart.CFrame = CFrame.new(handle.Position + Vector3.new(0, 2, 0))
                         wait(0.2)
                         pcall(function()
-                            game:GetService("VirtualInputManager"):SendKeyEvent(true, "E", false, nil)
+                            game:GetService("VirtualInputManager"):SendKeyEvent(true, settings.CollectKey, false, nil)
                             wait(0.1)
-                            game:GetService("VirtualInputManager"):SendKeyEvent(false, "E", false, nil)
+                            game:GetService("VirtualInputManager"):SendKeyEvent(false, settings.CollectKey, false, nil)
                         end)
                         return true
                     end
@@ -348,75 +375,147 @@ local function collectFruits()
     return false
 end
 
+-- [8] АВТО-КВЕСТ
+local function autoQuest()
+    local level = getPlayerLevel()
+    local character = player.Character
+    if not character then return false end
+    
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return false end
+    
+    -- Шукаємо NPC для квесту
+    for _, v in pairs(workspace:GetChildren()) do
+        if v:IsA("Model") and v:FindFirstChild("Humanoid") then
+            local hrp = v:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                local dist = (rootPart.Position - hrp.Position).Magnitude
+                if dist < 30 then
+                    -- Підходимо до NPC
+                    rootPart.CFrame = hrp.CFrame * CFrame.new(0, 2, 3)
+                    wait(0.5)
+                    -- Натискаємо E
+                    pcall(function()
+                        game:GetService("VirtualInputManager"):SendKeyEvent(true, "E", false, nil)
+                        wait(0.2)
+                        game:GetService("VirtualInputManager"):SendKeyEvent(false, "E", false, nil)
+                    end)
+                    return true
+                end
+            end
+        end
+    end
+    return false
+end
+
 -- ============================================
--- [9] ГОЛОВНИЙ ЦИКЛ
+-- ГОЛОВНИЙ ЦИКЛ (З ДІАГНОСТИКОЮ)
 -- ============================================
 local function mainLoop()
-    while wait(0.5) do
+    local loopCount = 0
+    
+    while wait(1) do
+        loopCount = loopCount + 1
+        
         -- Оновлюємо персонажа
-        if not character or not character.Parent then
-            character = player.Character or player.CharacterAdded:Wait()
-            rootPart = character:FindFirstChild("HumanoidRootPart")
+        if not player.Character then
+            log("⏳ Очікування персонажа...")
+            player.CharacterAdded:Wait()
+            log("✅ Персонаж з'явився!")
         end
         
-        local status = "Очікування..."
+        local character = player.Character
+        if not character then continue end
         
-        -- АВТО-ФАРМ
+        local status = "Очікування..."
+        local level = getPlayerLevel()
+        
+        -- [A] АВТО-ФАРМ
         if settings.AutoFarm then
             local enemy = getNearestEnemy()
             if enemy then
-                status = "⚔️ Атака: " .. enemy.Name
+                local enemyName = enemy.Name
+                status = "⚔️ Атака: " .. enemyName .. " (Рівень: " .. level .. ")"
+                
                 if settings.AutoTeleport then
                     flyToEnemy(enemy)
                 end
-                attack()
+                
+                local attacked = attack()
+                if attacked then
+                    status = status .. " ✅"
+                else
+                    status = status .. " ❌ (помилка атаки)"
+                end
             else
-                status = "🔍 Пошук ворогів (рівень " .. getPlayerLevel() .. ")"
+                local enemiesCount = #getTargetEnemies()
+                status = "🔍 Пошук ворогів для рівня " .. level .. " (знайдено: " .. enemiesCount .. ")"
             end
         end
         
-        -- АВТО-ЗБІР
+        -- [B] АВТО-ЗБІР
         if settings.AutoCollect then
-            if collectFruits() then
-                status = "🍎 Збір фруктів..."
+            local collected = collectFruits()
+            if collected then
+                status = "🍎 Зібрано фрукт!"
             end
         end
         
-        -- АВТО-КВЕСТ
+        -- [C] АВТО-КВЕСТ
         if settings.AutoQuest then
-            -- Тут логіка взяття квесту
-            status = "📋 Пошук квесту..."
+            local questTaken = autoQuest()
+            if questTaken then
+                status = "📋 Квест взято!"
+            end
         end
         
-        -- Оновлюємо статус
+        -- Оновлюємо статус (з захистом від помилок)
         pcall(function()
             if statusLabel then
-                statusLabel.Text = "Статус: " .. status
+                statusLabel.Text = "📊 " .. status
             end
         end)
+        
+        -- Логування кожні 10 циклів
+        if loopCount % 10 == 0 then
+            log("🔄 Цикл " .. loopCount .. " | Рівень: " .. level .. " | Статус: " .. status)
+        end
     end
 end
 
 -- ============================================
--- [10] ЗАПУСК
+-- ЗАПУСК
 -- ============================================
-print("=" .. string.rep("=", 50))
-print("🔄 ЗАПУСК ГОЛОВНОГО ЦИКЛУ...")
-print("=" .. string.rep("=", 50))
 
--- Запускаємо цикл
+print("=" .. string.rep("=", 60))
+print("🔄 ЗАПУСК ВСІХ СИСТЕМ...")
+print("=" .. string.rep("=", 60))
+
+-- Створюємо GUI
+local guiCreated = pcall(createGUI)
+if guiCreated then
+    print("✅ GUI створено успішно!")
+else
+    print("❌ Помилка створення GUI! Спробуйте інший екзекутор.")
+end
+
+-- Запускаємо головний цикл
 spawn(mainLoop)
 
--- Повідомлення про успішний запуск
-wait(1)
-game:GetService("StarterGui"):SetCore("SendNotification", {
-    Title = "✅ СКРИПТ ЗАПУЩЕНО!",
-    Text = "Меню має з'явитися в центрі екрану",
-    Duration = 5,
-    Icon = "rbxassetid://4483345998"
-})
-
-print("=" .. string.rep("=", 50))
+-- Повідомлення
+wait(2)
+print("=" .. string.rep("=", 60))
 print("🎯 СКРИПТ ГОТОВИЙ ДО РОБОТИ!")
-print("📌 ЯКЩО МЕНЮ НЕ З'ЯВИЛОСЬ - ДИВІТЬСЯ КОНСОЛЬ (F9)")
-print("=" .. string.rep("=", 50))
+print("📌 МЕНЮ ПОВИННО З'ЯВИТИСЯ В ЦЕНТРІ ЕКРАНУ")
+print("📌 НАТИСНІТЬ F9 ДЛЯ ПЕРЕГЛЯДУ ЛОГІВ")
+print("📌 ПЕРЕВІРТЕ, ЩО ВИ В ГРІ, А НЕ В ЛОБІ")
+print("=" .. string.rep("=", 60))
+
+-- Спроба показати сповіщення
+pcall(function()
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "✅ СКРИПТ ЗАПУЩЕНО!",
+        Text = "Меню в центрі екрану. Натисніть F9 для логів.",
+        Duration = 5
+    })
+end)
